@@ -18,7 +18,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
   <!-- SheetJS (Export Excel .xlsx) -->
-  <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
   <!-- jsPDF & AutoTable (Export PDF) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -2850,29 +2850,48 @@
         matchingKelas.map(k => `<option value="${escapeHtml(k.id)}">${escapeHtml(k.namaKelas)} — ${escapeHtml(k.semester)}</option>`).join('');
     }
 
-    function getFilteredReportSets() {
-      const jenjang = document.getElementById('wkFilterJenjang').value;
-      const semester = document.getElementById('wkFilterSemester').value;
-      const idKelas = document.getElementById('wkFilterKelas').value;
-      const search = document.getElementById('wkSearchInput').value.toLowerCase().trim();
+   function getFilteredReportSets() {
+      const jenjang = (document.getElementById('wkFilterJenjang').value || '').trim();
+      const semester = (document.getElementById('wkFilterSemester').value || '').trim();
+      const idKelas = (document.getElementById('wkFilterKelas').value || '').trim();
+      const search = (document.getElementById('wkSearchInput').value || '').toLowerCase().trim();
 
       const allowedKelas = state.kelas.filter(k => {
-        if (jenjang && k.jenjang !== jenjang) return false;
-        if (semester && k.semester !== semester) return false;
-        if (idKelas && k.id !== idKelas) return false;
+        if (jenjang && String(k.jenjang || '').trim() !== jenjang) return false;
+        if (semester && String(k.semester || '').trim() !== semester) return false;
+        if (idKelas && String(k.id || '').trim() !== idKelas) return false;
         return true;
       });
-      const allowedIds = new Set(allowedKelas.map(k => k.id));
+      const allowedIds = new Set(allowedKelas.map(k => String(k.id || '').trim()));
+      const allowedNamaSet = new Set(allowedKelas.map(k => String(k.namaKelas || '').trim().toUpperCase()));
 
-      const targetSiswa = state.siswa.filter(s => allowedIds.has(s.idKelas));
-      const targetJawaban = state.jawaban.filter(j => allowedIds.has(j['ID_Kelas']));
+      const targetSiswa = state.siswa.filter(s => allowedIds.has(String(s.idKelas || '').trim()));
+      const targetJawaban = state.jawaban.filter(j => {
+        const jId = String(j['ID_Kelas'] || '').trim();
+        if (jId && allowedIds.has(jId)) return true;
 
-      const submittedSet = new Set(targetJawaban.map(j => `${j['ID_Kelas']}|${j['NISN']}`));
-      const belumSiswa = targetSiswa.filter(s => !submittedSet.has(`${s.idKelas}|${s.nisn}`));
+        // Fallback jika baris di Sheet Jawaban diisi manual tanpa ID_Kelas
+        const jKelas = String(j['Kelas'] || '').trim().toUpperCase();
+        const jJenjang = String(j['Jenjang'] || '').trim();
+        const jSem = String(j['Semester'] || '').trim();
+        if (!jId && allowedNamaSet.has(jKelas)) {
+          if (jenjang && jJenjang !== jenjang) return false;
+          if (semester && jSem !== semester) return false;
+          return true;
+        }
+        return false;
+      });
+
+      const submittedSet = new Set(
+        targetJawaban.map(j => `${String(j['ID_Kelas'] || '').trim()}|${String(j['NISN'] || '').trim()}`)
+      );
+      const belumSiswa = targetSiswa.filter(
+        s => !submittedSet.has(`${String(s.idKelas || '').trim()}|${String(s.nisn || '').trim()}`)
+      );
 
       const filterSearch = (nama, nisn) => {
         if (!search) return true;
-        return String(nama).toLowerCase().includes(search) || String(nisn).toLowerCase().includes(search);
+        return String(nama || '').toLowerCase().includes(search) || String(nisn || '').toLowerCase().includes(search);
       };
 
       return {
@@ -2887,8 +2906,14 @@
 
     function buildFilterLabel(jenjang, semester, idKelas) {
       if (idKelas) {
-        const k = state.kelas.find(x => x.id === idKelas);
-        if (k) return `Kelas_${k.namaKelas}_${k.semester}`;
+        const k = state.kelas.find(x => String(x.id || '').trim() === idKelas);
+        if (k) {
+          const parts = [];
+          if (k.jenjang) parts.push(k.jenjang);
+          parts.push('Kelas_' + k.namaKelas);
+          if (k.semester) parts.push(k.semester);
+          return parts.join('_');
+        }
       }
       const parts = [];
       if (jenjang) parts.push(jenjang);
@@ -2898,6 +2923,9 @@
 
     function switchWkTab(tab) {
       state.wkActiveTab = tab;
+      const exportSel = document.getElementById('wkExportTarget');
+      if (exportSel) exportSel.value = tab;
+
       const btnS = document.getElementById('wkTabSudahBtn');
       const btnB = document.getElementById('wkTabBelumBtn');
       const panS = document.getElementById('wkPanelSudah');
@@ -3009,36 +3037,114 @@
       return { title: 'Data Isian Murid', filePrefix: 'Data_Murid', meta: r.metaTitle, headers, rows };
     }
 
+    function triggerBlobDownload(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 250);
+    }
+
+    function escapeXml(str) {
+      return String(str ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&apos;');
+    }
+
+    function downloadExcelXmlFallback(exp, safeMeta) {
+      const headerRow = '<Row>' + exp.headers.map(h =>
+        `<Cell ss:StyleID="hdr"><Data ss:Type="String">${escapeXml(h)}</Data></Cell>`
+      ).join('') + '</Row>';
+
+      const dataRows = exp.rows.map(row =>
+        '<Row>' + row.map(val =>
+          `<Cell><Data ss:Type="String">${escapeXml(val)}</Data></Cell>`
+        ).join('') + '</Row>'
+      ).join('');
+
+      const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+  xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+  <Styles>
+    <Style ss:ID="hdr">
+      <Font ss:Bold="1" ss:Color="#FFFFFF"/>
+      <Interior ss:Color="#065F46" ss:Pattern="Solid"/>
+    </Style>
+  </Styles>
+  <Worksheet ss:Name="Data Murid">
+    <Table>
+      ${headerRow}
+      ${dataRows}
+    </Table>
+  </Worksheet>
+</Workbook>`;
+
+      const blob = new Blob([xml], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+      const safeFile = `${exp.filePrefix}_MTsN3Banyuwangi_${safeMeta}.xls`;
+      triggerBlobDownload(blob, safeFile);
+    }
+
     function exportToExcel() {
       const exp = prepareExportMatrix();
       if (exp.rows.length === 0) {
-        Swal.fire('Data Kosong', 'Tidak ada data untuk diunduh pada filter ini.', 'info');
+        Swal.fire('Data Kosong', 'Tidak ada data untuk diunduh pada filter yang dipilih.', 'info');
         return;
       }
 
-      const aoa = [exp.headers, ...exp.rows];
-      const ws = XLSX.utils.aoa_to_sheet(aoa);
+      const safeMeta = exp.meta.replace(/[^a-zA-Z0-9_-]/g, '_');
 
-      const range = XLSX.utils.decode_range(ws['!ref']);
-      for (let R = range.s.r; R <= range.e.r; R++) {
-        for (let C = range.s.c; C <= range.e.c; C++) {
-          const addr = XLSX.utils.encode_cell({ r: R, c: C });
-          if (ws[addr]) {
-            ws[addr].t = 's';
-            ws[addr].v = String(ws[addr].v ?? '');
-          }
-        }
+      // Jika CDN SheetJS tidak termuat, otomatis gunakan generator Excel bawaan (.xls)
+      if (typeof XLSX === 'undefined' || !XLSX.utils) {
+        downloadExcelXmlFallback(exp, safeMeta);
+        return;
       }
 
-      ws['!cols'] = exp.headers.map((h, i) => {
-        const maxLen = Math.max(h.length, ...exp.rows.map(r => (r[i] || '').length));
-        return { wch: Math.min(Math.max(maxLen + 3, 12), 45) };
-      });
+      try {
+        const aoa = [exp.headers, ...exp.rows];
+        const ws = XLSX.utils.aoa_to_sheet(aoa);
 
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'Data Murid');
-      const safeFile = `${exp.filePrefix}_MTsN3Banyuwangi_${exp.meta.replace(/[^a-zA-Z0-9_-]/g, '_')}.xlsx`;
-      XLSX.writeFile(wb, safeFile);
+        // Paksa semua sel menjadi teks agar awalan 0 (NISN/HP) & tanggal DD-MM-YYYY utuh
+        if (ws['!ref']) {
+          const range = XLSX.utils.decode_range(ws['!ref']);
+          for (let R = range.s.r; R <= range.e.r; R++) {
+            for (let C = range.s.c; C <= range.e.c; C++) {
+              const addr = XLSX.utils.encode_cell({ r: R, c: C });
+              if (ws[addr]) {
+                ws[addr].t = 's';
+                ws[addr].v = String(ws[addr].v ?? '');
+                ws[addr].z = '@';
+              }
+            }
+          }
+        }
+
+        ws['!cols'] = exp.headers.map((h, i) => {
+          const maxLen = exp.rows.reduce((max, r) => Math.max(max, String(r[i] || '').length), String(h || '').length);
+          return { wch: Math.min(Math.max(maxLen + 3, 12), 45) };
+        });
+
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Data Murid');
+
+        const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+        const blob = new Blob([wbout], {
+          type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        });
+        const safeFile = `${exp.filePrefix}_MTsN3Banyuwangi_${safeMeta}.xlsx`;
+        triggerBlobDownload(blob, safeFile);
+      } catch (err) {
+        console.error('Gagal export .xlsx, beralih ke fallback .xls:', err);
+        downloadExcelXmlFallback(exp, safeMeta);
+      }
     }
 
     function exportToPDF() {
