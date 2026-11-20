@@ -201,6 +201,20 @@
           </button>
         </div>
 
+        <!-- Banner Status Formulir OFF / Di Luar Jadwal -->
+        <div id="formClosedBanner" class="hidden mb-5 rounded-2xl bg-rose-50 border border-rose-200 p-4 sm:p-5 text-rose-900 fade-in">
+          <div class="flex items-start gap-3">
+            <div class="w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center text-lg shrink-0">
+              <i class="fa-solid fa-lock"></i>
+            </div>
+            <div>
+              <h3 class="text-sm sm:text-base font-extrabold text-rose-800">Formulir Sedang Ditutup</h3>
+              <p id="formClosedReasonText" class="text-xs sm:text-sm text-rose-700 mt-1"></p>
+              <p id="formScheduleInfo" class="text-[11px] font-semibold text-rose-600/90 mt-2"></p>
+            </div>
+          </div>
+        </div>
+        
         <label for="selectKelasSiswa" class="block text-sm font-semibold text-slate-700 mb-2">
           Kelas / Semester <span class="text-rose-500">*</span>
         </label>
@@ -471,6 +485,9 @@
 
       <!-- Tab Navigasi Admin (4 Tab) -->
       <div class="flex flex-wrap gap-2 border-b border-slate-200 pb-3">
+        <button type="button" id="tabBtnPengaturan" onclick="switchAdminTab('pengaturan')" class="admin-tab px-4 py-2.5 rounded-xl font-bold text-sm bg-emerald-700 text-white shadow">
+          <i class="fa-solid fa-sliders mr-1.5"></i>On/Off &amp; Kelas Aktif
+        </button>
         <button type="button" id="tabBtnKelas" onclick="switchAdminTab('kelas')" class="admin-tab px-4 py-2.5 rounded-xl font-bold text-sm bg-emerald-700 text-white shadow">
           <i class="fa-solid fa-school mr-1.5"></i>Kelas &amp; Semester
         </button>
@@ -485,6 +502,76 @@
         </button>
       </div>
 
+     <!-- TAB 0: PENGATURAN ON/OFF, JADWAL & KELAS AKTIF PER JENJANG -->
+      <div id="adminTabPengaturan" class="glass-card rounded-3xl shadow-lg p-5 sm:p-6">
+        <form onsubmit="saveAdminSettingsForm(event)" class="space-y-6">
+
+          <!-- Saklar ON/OFF & Jadwal -->
+          <div class="rounded-2xl bg-slate-50 border border-slate-200 p-4 sm:p-5 space-y-4">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 class="text-base sm:text-lg font-extrabold text-slate-800">Status &amp; Jadwal Formulir</h3>
+                <p class="text-xs text-slate-500">Atur status penerimaan responden serta batas tanggal &amp; jam buka-tutup (WIB).</p>
+              </div>
+              <div class="flex items-center gap-3">
+                <span id="cfgFormEnabledBadge" class="text-xs font-extrabold px-3 py-1 rounded-full bg-emerald-100 text-emerald-800">FORMULIR ON</span>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input id="cfgFormEnabled" type="checkbox" checked onchange="updateSettingsStatusPreview()" class="sr-only peer" />
+                  <div class="w-12 h-7 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:bg-emerald-600 after:content-[''] after:absolute after:top-1 after:left-1 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-5"></div>
+                </label>
+              </div>
+            </div>
+
+            <div id="cfgLiveStatusNote" class="rounded-xl bg-emerald-50 border border-emerald-200 px-3.5 py-2.5 text-xs text-emerald-900 font-medium"></div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <div class="flex items-center justify-between mb-1">
+                  <label for="cfgOpenAt" class="text-xs font-bold text-slate-700">Tanggal &amp; Jam Buka (Opsional)</label>
+                  <button type="button" onclick="clearScheduleField('cfgOpenAt')" class="text-[11px] font-semibold text-rose-600 hover:underline">Reset</button>
+                </div>
+                <input id="cfgOpenAt" type="datetime-local" oninput="updateSettingsStatusPreview()" class="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm font-medium" />
+              </div>
+              <div>
+                <div class="flex items-center justify-between mb-1">
+                  <label for="cfgCloseAt" class="text-xs font-bold text-slate-700">Tanggal &amp; Jam Tutup (Opsional)</label>
+                  <button type="button" onclick="clearScheduleField('cfgCloseAt')" class="text-[11px] font-semibold text-rose-600 hover:underline">Reset</button>
+                </div>
+                <input id="cfgCloseAt" type="datetime-local" oninput="updateSettingsStatusPreview()" class="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm font-medium" />
+              </div>
+            </div>
+
+            <div>
+              <label for="cfgClosedMessage" class="block text-xs font-bold text-slate-700 mb-1">Pesan Saat Formulir OFF</label>
+              <textarea id="cfgClosedMessage" rows="2" class="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm"></textarea>
+            </div>
+          </div>
+
+          <!-- Pilih Kelas Aktif Berdasarkan Jenjang -->
+          <div class="rounded-2xl bg-slate-50 border border-slate-200 p-4 sm:p-5 space-y-4">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <h3 class="text-base sm:text-lg font-extrabold text-slate-800">Kelas Aktif yang Bisa Mengisi Formulir</h3>
+                <p class="text-xs text-slate-500">Dikelompokkan otomatis sesuai kolom <strong>Jenjang</strong> di sheet <strong>Kelas</strong>. Hanya kelas yang dicentang yang bisa dipilih murid.</p>
+              </div>
+              <div class="flex gap-2">
+                <button type="button" onclick="setAllActiveKelas(true)" class="text-xs font-bold bg-emerald-100 hover:bg-emerald-200 text-emerald-800 px-3 py-1.5 rounded-lg">Aktifkan Semua</button>
+                <button type="button" onclick="setAllActiveKelas(false)" class="text-xs font-bold bg-rose-100 hover:bg-rose-200 text-rose-700 px-3 py-1.5 rounded-lg">Nonaktifkan Semua</button>
+              </div>
+            </div>
+
+            <div id="jenjangKelasContainer" class="space-y-3"></div>
+          </div>
+
+          <div class="flex justify-end">
+            <button type="submit" class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm px-6 py-3 rounded-xl shadow-lg transition">
+              <i class="fa-solid fa-floppy-disk"></i>
+              <span>Simpan Pengaturan</span>
+            </button>
+          </div>
+        </form>
+      </div>
+      
       <!-- TAB 1: KELOLA KELAS -->
       <div id="adminTabKelas" class="glass-card rounded-3xl shadow-lg p-5 sm:p-6">
         <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
@@ -786,12 +873,19 @@
       file: 'Upload File (Dokumen / Gambar)'
     };
 
-    const state = {
+   const state = {
       kelas: [],
       siswa: [],
       bagian: [],
       pertanyaan: [],
       submittedKeys: [],
+      settings: {
+        formEnabled: true,
+        openAt: '',
+        closeAt: '',
+        closedMessage: 'Formulir pengumpulan data murid sedang ditutup sementara. Silakan hubungi pihak sekolah / Admin.',
+        activeKelasIds: null
+      },
       jawabanHeaders: [],
       jawaban: [],
       selectedKelas: null,
@@ -1000,9 +1094,9 @@
             throw new Error('Respons server tidak valid. Pastikan akses Web App GAS adalah "Siapa saja (Anyone)".');
           }
 
-          if (json.code === 'ALREADY_SUBMITTED') {
-            const err = new Error(json.message || 'Data sudah pernah dikirim.');
-            err.code = 'ALREADY_SUBMITTED';
+          if (json.code === 'ALREADY_SUBMITTED' || json.code === 'FORM_CLOSED' || json.code === 'CLASS_INACTIVE') {
+            const err = new Error(json.message || 'Pengiriman ditolak oleh pengaturan formulir.');
+            err.code = json.code;
             throw err;
           }
           if (json.status === 'busy') {
@@ -1015,7 +1109,7 @@
           }
           return json;
         } catch (err) {
-          if (err.code === 'ALREADY_SUBMITTED' || err.noRetry) throw err;
+          if (err.code || err.noRetry) throw err;
           lastErr = err;
           if (attempt < maxRetries) {
             const delayMs = Math.min(12000, 1400 * attempt + Math.floor(Math.random() * 1400));
@@ -1063,9 +1157,85 @@
     // =========================================================================
     // INISIALISASI HALAMAN (TANPA MEMBLOKIR TOMBOL LOGIN)
     // =========================================================================
+   function computeEffectiveFormStatus() {
+      const cfg = state.settings || {};
+      const enabled = cfg.formEnabled !== false;
+      const openStr = (cfg.openAt || '').trim();
+      const closeStr = (cfg.closeAt || '').trim();
+      const closedMsg = cfg.closedMessage || 'Formulir pengumpulan data murid sedang ditutup sementara. Silakan hubungi pihak sekolah / Admin.';
+
+      const now = new Date();
+      const parseLocal = s => {
+        const m = s.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+        if (!m) return null;
+        return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), Number(m[4]), Number(m[5]), 0);
+      };
+      const fmtLabel = s => {
+        const m = s.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+        if (!m) return '';
+        return `${m[3]}-${m[2]}-${m[1]} pukul ${m[4]}:${m[5]} WIB`;
+      };
+
+      const openDt = parseLocal(openStr);
+      const closeDt = parseLocal(closeStr);
+
+      let isOpenNow = enabled;
+      let reason = '';
+
+      if (!enabled) {
+        isOpenNow = false;
+        reason = closedMsg;
+      } else if (openDt && now < openDt) {
+        isOpenNow = false;
+        reason = `Formulir baru akan dibuka pada ${fmtLabel(openStr)}.`;
+      } else if (closeDt && now > closeDt) {
+        isOpenNow = false;
+        reason = `Periode pengisian formulir telah berakhir pada ${fmtLabel(closeStr)}.`;
+      }
+
+      const schedParts = [];
+      if (openDt) schedParts.push(`Buka: ${fmtLabel(openStr)}`);
+      if (closeDt) schedParts.push(`Tutup: ${fmtLabel(closeStr)}`);
+
+      return {
+        isOpenNow,
+        reason,
+        scheduleText: schedParts.join(' • ')
+      };
+    }
+
+    function applyFormStatusUI() {
+      const eff = computeEffectiveFormStatus();
+      const banner = document.getElementById('formClosedBanner');
+      const reasonEl = document.getElementById('formClosedReasonText');
+      const schedEl = document.getElementById('formScheduleInfo');
+      const selKelas = document.getElementById('selectKelasSiswa');
+
+      if (!eff.isOpenNow) {
+        if (banner) banner.classList.remove('hidden');
+        if (reasonEl) reasonEl.textContent = eff.reason;
+        if (schedEl) schedEl.textContent = eff.scheduleText;
+        if (selKelas) selKelas.disabled = true;
+        document.getElementById('btnStep1Next').disabled = true;
+      } else {
+        if (banner) banner.classList.add('hidden');
+        if (selKelas) selKelas.disabled = false;
+        onKelasSelected();
+      }
+    }
+
+    function isKelasActive(idKelas) {
+      const activeIds = state.settings && state.settings.activeKelasIds;
+      if (!Array.isArray(activeIds)) return true;
+      return activeIds.includes(String(idKelas));
+    }
+    
     window.addEventListener('DOMContentLoaded', () => {
       initCleanLogo();
       loadPublicData();
+      setInterval(() => {
+        if (state.settings) applyFormStatusUI();
+      }, 15000);
     });
 
     async function loadPublicData() {
@@ -1083,7 +1253,12 @@
         state.bagian = (data.bagian || []).sort((a, b) => a.urutan - b.urutan);
         state.pertanyaan = data.pertanyaan || [];
         state.submittedKeys = data.submittedKeys || [];
+        if (data.settings) {
+          state.settings = Object.assign({}, state.settings, data.settings);
+        }
+
         populateKelasDropdown();
+        applyFormStatusUI();
 
         if (state.kelas.length === 0) {
           errText.textContent = 'Belum ada data kelas di Google Sheets. Silakan login sebagai Admin untuk menambahkan kelas atau klik Setup Database Sheet.';
@@ -1097,24 +1272,33 @@
       }
     }
 
-    // =========================================================================
-    // ALUR SISWA (STEP 1 -> STEP 2 -> STEP 3 MULTI-BAGIAN)
-    // =========================================================================
     function populateKelasDropdown() {
       const sel = document.getElementById('selectKelasSiswa');
+      const prevVal = sel.value;
       sel.innerHTML = '<option value="">-- Pilih Kelas / Semester --</option>';
+
       state.kelas.forEach(k => {
         const opt = document.createElement('option');
-        opt.value = k.id;
-        opt.textContent = `${k.namaKelas} — ${k.semester} (${k.jenjang})`;
+        const aktif = isKelasActive(k.id);
+        if (aktif) {
+          opt.value = k.id;
+          opt.textContent = `${k.namaKelas} — ${k.semester} (${k.jenjang})`;
+        } else {
+          opt.value = '';
+          opt.disabled = true;
+          opt.textContent = `${k.namaKelas} — ${k.semester} (${k.jenjang}) • Tidak Aktif`;
+        }
         sel.appendChild(opt);
       });
+
+      if (prevVal && isKelasActive(prevVal)) sel.value = prevVal;
       onKelasSelected();
     }
 
     function onKelasSelected() {
+      const eff = computeEffectiveFormStatus();
       const id = document.getElementById('selectKelasSiswa').value;
-      document.getElementById('btnStep1Next').disabled = !id;
+      document.getElementById('btnStep1Next').disabled = !eff.isOpenNow || !id || !isKelasActive(id);
     }
 
     function setStepIndicator(step) {
@@ -1137,24 +1321,41 @@
     }
 
     async function goToStep2() {
+      const eff = computeEffectiveFormStatus();
+      if (!eff.isOpenNow) {
+        Swal.fire('Formulir Ditutup', eff.reason, 'warning');
+        applyFormStatusUI();
+        return;
+      }
+
       const idKelas = document.getElementById('selectKelasSiswa').value;
       const kelasObj = state.kelas.find(k => k.id === idKelas);
-      if (!kelasObj) return;
+      if (!kelasObj || !isKelasActive(idKelas)) {
+        Swal.fire('Kelas Tidak Aktif', 'Kelas yang dipilih sedang tidak diaktifkan oleh Admin.', 'warning');
+        return;
+      }
+
       state.selectedKelas = kelasObj;
       state.selectedSiswa = null;
 
-      showLoading('Memeriksa daftar murid terbaru...');
+      showLoading('Memeriksa status formulir & daftar murid...');
       try {
         const fresh = await apiGet('getSubmittedKeys', 2);
-        if (fresh && Array.isArray(fresh.submittedKeys)) {
-          state.submittedKeys = fresh.submittedKeys;
+        if (fresh) {
+          if (Array.isArray(fresh.submittedKeys)) state.submittedKeys = fresh.submittedKeys;
+          if (fresh.settings) state.settings = Object.assign({}, state.settings, fresh.settings);
         }
       } catch (e) {} finally {
         hideLoading();
       }
 
-      document.getElementById('selectedKelasLabel').textContent = `${kelasObj.namaKelas} • ${kelasObj.semester} (${kelasObj.jenjang})`;
-
+      const effAfter = computeEffectiveFormStatus();
+      if (!effAfter.isOpenNow || !isKelasActive(idKelas)) {
+        applyFormStatusUI();
+        populateKelasDropdown();
+        Swal.fire('Akses Ditutup', !effAfter.isOpenNow ? effAfter.reason : 'Kelas ini baru saja dinonaktifkan oleh Admin.', 'warning');
+        return;
+      }
       const siswaKelas = state.siswa
         .filter(s => s.idKelas === idKelas)
         .sort((a, b) => a.nama.localeCompare(b.nama, 'id'));
@@ -1193,6 +1394,7 @@
       document.getElementById('studentStep2').classList.remove('hidden');
       document.getElementById('studentStep3').classList.add('hidden');
     }
+    applyFormStatusUI();
 
     function onSiswaSelected() {
       const idSiswa = document.getElementById('selectNamaSiswa').value;
@@ -1859,6 +2061,11 @@
     async function submitStudentForm(e) {
       e.preventDefault();
       if (state.isSubmitting) return;
+      const eff = computeEffectiveFormStatus();
+      if (!eff.isOpenNow || !isKelasActive(state.selectedKelas && state.selectedKelas.id)) {
+        Swal.fire('Formulir Ditutup', !eff.isOpenNow ? eff.reason : 'Kelas ini tidak aktif untuk pengisian.', 'warning');
+        return;
+      }
 
       // Pastikan seluruh bagian valid
       for (let i = 0; i < state.formSections.length; i++) {
@@ -1981,6 +2188,11 @@
             confirmButtonColor: '#059669'
           });
           goToStep2();
+          const eff = computeEffectiveFormStatus();
+      if (!eff.isOpenNow || !isKelasActive(state.selectedKelas && state.selectedKelas.id)) {
+        Swal.fire('Formulir Ditutup', !eff.isOpenNow ? eff.reason : 'Kelas ini tidak aktif untuk pengisian.', 'warning');
+        return;
+      }
         } else {
           Swal.fire({
             icon: 'error',
@@ -2020,6 +2232,7 @@
     function closeLoginPage() {
       hideAllViews();
       document.getElementById('viewStudent').classList.remove('hidden');
+      applyFormStatusUI();
     }
 
     function togglePasswordVisibility() {
@@ -2095,7 +2308,7 @@
       hideAllViews();
       document.getElementById('viewAdmin').classList.remove('hidden');
       await refreshAdminData();
-      switchAdminTab('kelas');
+      switchAdminTab('pengaturan');
     }
 
     async function refreshAdminData() {
@@ -2107,7 +2320,11 @@
         state.bagian = (data.bagian || []).sort((a, b) => a.urutan - b.urutan);
         state.pertanyaan = data.pertanyaan || [];
         state.submittedKeys = data.submittedKeys || [];
+        if (data.settings) {
+          state.settings = Object.assign({}, state.settings, data.settings);
+        }
 
+        renderAdminPengaturan();
         renderAdminKelas();
         populateAdminSiswaFilter();
         renderAdminSiswa();
@@ -2115,6 +2332,7 @@
         populateAdminPertanyaanBagianFilter();
         renderAdminPertanyaan();
         populateKelasDropdown();
+        applyFormStatusUI();
       } catch (err) {
         Swal.fire('Error', err.message, 'error');
       } finally {
@@ -2123,7 +2341,7 @@
     }
 
     function switchAdminTab(tab) {
-      ['kelas', 'siswa', 'bagian', 'pertanyaan'].forEach(t => {
+      ['pengaturan', 'kelas', 'siswa', 'bagian', 'pertanyaan'].forEach(t => {
         const btn = document.getElementById(`tabBtn${capitalize(t)}`);
         const panel = document.getElementById(`adminTab${capitalize(t)}`);
         if (!btn || !panel) return;
@@ -2135,6 +2353,196 @@
           panel.classList.add('hidden');
         }
       });
+    }
+
+      function renderAdminPengaturan() {
+      const cfg = state.settings || {};
+      document.getElementById('cfgFormEnabled').checked = cfg.formEnabled !== false;
+      document.getElementById('cfgOpenAt').value = cfg.openAt || '';
+      document.getElementById('cfgCloseAt').value = cfg.closeAt || '';
+      document.getElementById('cfgClosedMessage').value =
+        cfg.closedMessage || 'Formulir pengumpulan data murid sedang ditutup sementara. Silakan hubungi pihak sekolah / Admin.';
+
+      updateSettingsStatusPreview();
+      renderJenjangKelasCheckboxes();
+    }
+
+    function clearScheduleField(inputId) {
+      const el = document.getElementById(inputId);
+      if (el) el.value = '';
+      updateSettingsStatusPreview();
+    }
+
+    function updateSettingsStatusPreview() {
+      const checked = document.getElementById('cfgFormEnabled').checked;
+      const openVal = document.getElementById('cfgOpenAt').value;
+      const closeVal = document.getElementById('cfgCloseAt').value;
+
+      const badge = document.getElementById('cfgFormEnabledBadge');
+      const note = document.getElementById('cfgLiveStatusNote');
+
+      if (!checked) {
+        badge.textContent = 'FORMULIR OFF';
+        badge.className = 'text-xs font-extrabold px-3 py-1 rounded-full bg-rose-100 text-rose-700';
+        note.className = 'rounded-xl bg-rose-50 border border-rose-200 px-3.5 py-2.5 text-xs text-rose-900 font-semibold';
+        note.innerHTML = '<i class="fa-solid fa-circle-xmark mr-1.5"></i>Saklar dalam posisi <strong>OFF</strong>: murid tidak dapat memilih kelas atau mengirim data.';
+        return;
+      }
+
+      badge.textContent = 'FORMULIR ON';
+      badge.className = 'text-xs font-extrabold px-3 py-1 rounded-full bg-emerald-100 text-emerald-800';
+
+      const fmt = s => {
+        const m = s.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+        return m ? `${m[3]}-${m[2]}-${m[1]} jam ${m[4]}:${m[5]}` : '';
+      };
+
+      const now = new Date();
+      const openDt = openVal ? new Date(openVal) : null;
+      const closeDt = closeVal ? new Date(closeVal) : null;
+
+      let statusMsg = 'Saklar <strong>ON</strong>: formulir terbuka untuk kelas aktif.';
+      if (openDt && now < openDt) {
+        statusMsg += ` (Akan mulai aktif otomatis pada <strong>${fmt(openVal)}</strong>).`;
+      }
+      if (closeDt) {
+        statusMsg += now > closeDt
+          ? ` (<strong>Sudah melewati batas tutup ${fmt(closeVal)}</strong> — formulir otomatis OFF).`
+          : ` (Akan otomatis OFF setelah <strong>${fmt(closeVal)}</strong>).`;
+      }
+
+      note.className = 'rounded-xl bg-emerald-50 border border-emerald-200 px-3.5 py-2.5 text-xs text-emerald-900 font-medium';
+      note.innerHTML = `<i class="fa-solid fa-circle-check mr-1.5"></i>${statusMsg}`;
+    }
+
+    function renderJenjangKelasCheckboxes() {
+      const container = document.getElementById('jenjangKelasContainer');
+      if (state.kelas.length === 0) {
+        container.innerHTML = '<div class="p-4 rounded-xl bg-white border border-slate-200 text-sm text-slate-400 text-center">Belum ada data kelas di sheet Kelas.</div>';
+        return;
+      }
+
+      const groups = {};
+      const orderJenjang = [];
+      state.kelas.forEach(k => {
+        const j = (k.jenjang || 'Tanpa Jenjang').trim();
+        if (!groups[j]) {
+          groups[j] = [];
+          orderJenjang.push(j);
+        }
+        groups[j].push(k);
+      });
+
+      container.innerHTML = orderJenjang.map((jenjang, gIdx) => {
+        const listKelas = groups[jenjang];
+        const groupId = `jenjang_grp_${gIdx}`;
+        const itemsHtml = listKelas.map(k => {
+          const isChecked = isKelasActive(k.id);
+          return `
+            <label class="flex items-center justify-between gap-2 bg-white border ${isChecked ? 'border-emerald-300 bg-emerald-50/30' : 'border-slate-200'} hover:border-emerald-400 rounded-xl px-3.5 py-2.5 cursor-pointer transition">
+              <div class="flex items-center gap-2.5 min-w-0">
+                <input
+                  type="checkbox"
+                  name="activeKelasCb"
+                  data-jenjang-group="${groupId}"
+                  value="${escapeHtml(k.id)}"
+                  ${isChecked ? 'checked' : ''}
+                  onchange="this.parentElement.parentElement.className = this.checked ? 'flex items-center justify-between gap-2 bg-white border border-emerald-300 bg-emerald-50/30 hover:border-emerald-400 rounded-xl px-3.5 py-2.5 cursor-pointer transition' : 'flex items-center justify-between gap-2 bg-white border border-slate-200 hover:border-emerald-400 rounded-xl px-3.5 py-2.5 cursor-pointer transition'"
+                  class="w-4 h-4 accent-emerald-600 rounded shrink-0"
+                />
+                <div class="min-w-0">
+                  <span class="text-sm font-bold text-slate-800">${escapeHtml(k.namaKelas)}</span>
+                  <span class="block text-[11px] text-slate-500 truncate">${escapeHtml(k.semester || '-')}</span>
+                </div>
+              </div>
+            </label>
+          `;
+        }).join('');
+
+        return `
+          <div class="rounded-2xl bg-white border border-slate-200 p-4 space-y-3">
+            <div class="flex items-center justify-between flex-wrap gap-2 border-b border-slate-100 pb-2">
+              <span class="text-sm font-extrabold text-emerald-900 flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                Jenjang: ${escapeHtml(jenjang)}
+                <span class="text-xs font-semibold text-slate-400">(${listKelas.length} kelas)</span>
+              </span>
+              <div class="flex gap-2 text-xs font-bold">
+                <button type="button" onclick="toggleGroupKelas('${groupId}', true)" class="text-emerald-700 hover:underline">Pilih Semua</button>
+                <span class="text-slate-300">|</span>
+                <button type="button" onclick="toggleGroupKelas('${groupId}', false)" class="text-rose-600 hover:underline">Kosongkan</button>
+              </div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
+              ${itemsHtml}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function toggleGroupKelas(groupId, checked) {
+      document.querySelectorAll(`input[name="activeKelasCb"][data-jenjang-group="${groupId}"]`).forEach(cb => {
+        cb.checked = checked;
+        cb.dispatchEvent(new Event('change'));
+      });
+    }
+
+    function setAllActiveKelas(checked) {
+      document.querySelectorAll('input[name="activeKelasCb"]').forEach(cb => {
+        cb.checked = checked;
+        cb.dispatchEvent(new Event('change'));
+      });
+    }
+
+    async function saveAdminSettingsForm(e) {
+      e.preventDefault();
+      const formEnabled = document.getElementById('cfgFormEnabled').checked;
+      const openAt = document.getElementById('cfgOpenAt').value;
+      const closeAt = document.getElementById('cfgCloseAt').value;
+      const closedMessage = document.getElementById('cfgClosedMessage').value.trim();
+
+      if (openAt && closeAt && new Date(openAt) > new Date(closeAt)) {
+        Swal.fire('Jadwal Tidak Valid', 'Tanggal & jam buka tidak boleh melebihi tanggal & jam tutup.', 'warning');
+        return;
+      }
+
+      const activeKelasIds = Array.from(document.querySelectorAll('input[name="activeKelasCb"]:checked'))
+        .map(cb => cb.value);
+
+      showLoading('Menyimpan pengaturan formulir & kelas aktif...');
+      try {
+        const res = await apiPost({
+          action: 'saveFormSettings',
+          settings: {
+            formEnabled,
+            openAt,
+            closeAt,
+            closedMessage,
+            activeKelasIds
+          }
+        }, { maxRetries: 2 });
+
+        if (res.data) {
+          state.settings = Object.assign({}, state.settings, res.data);
+        }
+        renderAdminKelas();
+        populateKelasDropdown();
+        applyFormStatusUI();
+        hideLoading();
+
+        Swal.fire({
+          toast: true,
+          position: 'top-end',
+          icon: 'success',
+          title: 'Pengaturan berhasil disimpan',
+          showConfirmButton: false,
+          timer: 2000
+        });
+      } catch (err) {
+        hideLoading();
+        Swal.fire('Gagal', err.message, 'error');
+      }
     }
 
     function capitalize(s) {
